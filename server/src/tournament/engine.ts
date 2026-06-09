@@ -1,7 +1,6 @@
 import { query, execute } from '../db';
-import * as mysql from 'mysql2/promise';
 
-interface StandingRow extends mysql.RowDataPacket {
+interface StandingRow {
   team_id: number;
   team_name: string;
   group_name: string;
@@ -55,7 +54,7 @@ export async function updateStandings(
 }
 
 export async function getGroupStandings(): Promise<StandingRow[]> {
-  return query<StandingRow[]>(
+  return query<StandingRow>(
     `SELECT s.*, t.name as team_name
      FROM standings s
      JOIN teams t ON t.id = s.team_id
@@ -156,7 +155,7 @@ export async function generateNextKnockoutRound(currentRound: string): Promise<v
   const nextRound = roundProgression[currentRound];
   if (!nextRound) return;
 
-  const matches = await query<mysql.RowDataPacket[]>(
+  const matches = await query(
     `SELECT * FROM matches WHERE round_name = ? AND stage = 'knockout' AND played = 1 ORDER BY match_order`,
     [currentRound]
   );
@@ -212,7 +211,7 @@ export async function simulateMatch(teamAId: number, teamBId: number): Promise<{
 }
 
 export async function simulateRemainingGroupMatches(): Promise<void> {
-  const unplayed = await query<mysql.RowDataPacket[]>(
+  const unplayed = await query(
     `SELECT * FROM matches WHERE stage = 'group' AND played = 0`
   );
 

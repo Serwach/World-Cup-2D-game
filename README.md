@@ -5,14 +5,15 @@ Local 2-player top-down arcade football with real World Cup 2026 teams.
 ## Requirements
 
 - Node.js 18+
-- MySQL 8+ running locally
+
+The database is **SQLite** (via [`better-sqlite3`](https://github.com/WiseLibs/better-sqlite3)) — no external database server needed. The DB file is created automatically at `db/worldcup2026.sqlite`.
 
 ## Quick Start
 
 ```bash
-# 1. Create a .env file
+# 1. (Optional) Create a .env file
 cp .env.example .env
-# Edit .env with your MySQL credentials
+# Defaults work out of the box; set DB_FILE to override the SQLite path.
 
 # 2. Install all dependencies
 npm install

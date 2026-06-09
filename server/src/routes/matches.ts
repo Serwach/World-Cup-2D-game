@@ -1,7 +1,6 @@
 import { Router, Request, Response } from 'express';
 import { query, execute } from '../db';
 import { updateStandings, generateNextKnockoutRound } from '../tournament/engine';
-import * as mysql from 'mysql2/promise';
 
 const router = Router();
 
@@ -30,7 +29,7 @@ router.get('/', async (req: Request, res: Response) => {
 
     sql += ' ORDER BY m.match_order';
 
-    const matches = await query<mysql.RowDataPacket[]>(sql, params);
+    const matches = await query(sql, params);
     res.json(matches);
   } catch (err) {
     res.status(500).json({ error: String(err) });
@@ -39,7 +38,7 @@ router.get('/', async (req: Request, res: Response) => {
 
 router.get('/:id', async (req: Request, res: Response) => {
   try {
-    const [match] = await query<mysql.RowDataPacket[]>(
+    const [match] = await query(
       `SELECT m.*,
         ta.name as team_a_name, ta.flag_emoji as team_a_flag,
         tb.name as team_b_name, tb.flag_emoji as team_b_flag
@@ -72,7 +71,7 @@ router.post('/result', async (req: Request, res: Response) => {
       penaltyScoreB?: number;
     };
 
-    const [match] = await query<mysql.RowDataPacket[]>(
+    const [match] = await query(
       'SELECT * FROM matches WHERE id = ?', [matchId]
     );
     if (!match) return res.status(404).json({ error: 'Match not found' });
@@ -94,7 +93,7 @@ router.post('/result', async (req: Request, res: Response) => {
 
     // Check if we should advance knockout round
     if (match.stage === 'knockout') {
-      const remaining = await query<mysql.RowDataPacket[]>(
+      const remaining = await query(
         `SELECT COUNT(*) as cnt FROM matches
          WHERE round_name = ? AND stage = 'knockout' AND played = 0`,
         [match.round_name]

@@ -1,31 +1,9 @@
 /**
- * Integration tests: Match simulation and DB update
- * Requires running MySQL on localhost. Skip if no DB available.
+ * Integration tests: match scoring and tournament state-machine logic.
+ * Pure logic — no database connection required (the app uses SQLite).
  */
-import * as dotenv from 'dotenv';
-import * as path from 'path';
-
-dotenv.config({ path: path.join(__dirname, '../../.env') });
-
-let skipTests = false;
-
-// Check if we can connect
-beforeAll(async () => {
-  if (!process.env.DB_HOST) {
-    skipTests = true;
-    console.warn('[integration] No DB_HOST set — skipping DB tests.');
-  }
-});
-
-// Conditionally run with dynamic import to avoid connection errors in CI
 describe('Match result API', () => {
-  beforeAll(async () => {
-    if (skipTests) return;
-  });
-
   test('Standing update: win gives 3 points', () => {
-    if (skipTests) return;
-
     function calcPoints(scoreA: number, scoreB: number): { aPoints: number; bPoints: number } {
       const aWon = scoreA > scoreB;
       const draw = scoreA === scoreB;

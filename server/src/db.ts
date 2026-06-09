@@ -1,50 +1,35 @@
-import * as mysql from 'mysql2/promise';
+import Database from 'better-sqlite3';
 import * as fs from 'fs';
 import * as path from 'path';
 
-let pool: mysql.Pool | null = null;
+let db: Database.Database | null = null;
 
-export function getPool(): mysql.Pool {
-  if (!pool) {
-    pool = mysql.createPool({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306'),
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'worldcup2026',
-      waitForConnections: true,
-      connectionLimit: 10,
-      queueLimit: 0,
-    });
+function dbFilePath(): string {
+  if (process.env.DB_FILE) return path.resolve(process.env.DB_FILE);
+  // Default: <project>/db/worldcup2026.sqlite (works from both src and dist).
+  return path.join(__dirname, '../../db/worldcup2026.sqlite');
+}
+
+export function getDb(): Database.Database {
+  if (!db) {
+    db = new Database(dbFilePath());
+    db.pragma('journal_mode = WAL');
+    db.pragma('foreign_keys = ON');
   }
-  return pool;
+  return db;
 }
 
 export async function runMigrations(): Promise<void> {
-  const conn = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '3306'),
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'password',
-    multipleStatements: true,
-  });
-
-  try {
-    const schemaPath = path.join(__dirname, '../../db/schema.sql');
-    const schema = fs.readFileSync(schemaPath, 'utf8');
-    await conn.query(schema);
-    console.log('[DB] Migrations applied.');
-  } finally {
-    await conn.end();
-  }
+  const database = getDb();
+  const schemaPath = path.join(__dirname, '../../db/schema.sql');
+  const schema = fs.readFileSync(schemaPath, 'utf8');
+  database.exec(schema);
+  console.log('[DB] Migrations applied.');
 }
 
 export async function checkAndSeed(): Promise<void> {
-  const db = getPool();
-  const [rows] = await db.execute<mysql.RowDataPacket[]>(
-    'SELECT COUNT(*) as cnt FROM teams'
-  );
-  const count = rows[0].cnt as number;
+  const rows = await query<{ cnt: number }>('SELECT COUNT(*) as cnt FROM teams');
+  const count = rows[0].cnt;
   if (count > 0) {
     console.log(`[DB] Already seeded (${count} teams found).`);
     return;
@@ -52,31 +37,22 @@ export async function checkAndSeed(): Promise<void> {
 
   console.log('[DB] Seeding database...');
   const { seed } = await import('./seeder');
-  const conn = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: parseInt(process.env.DB_PORT || '3306'),
-    user: process.env.DB_USER || 'root',
-    password: process.env.DB_PASSWORD || 'password',
-    database: process.env.DB_NAME || 'worldcup2026',
-    multipleStatements: true,
-  });
-  try {
-    await seed(conn);
-  } finally {
-    await conn.end();
-  }
+  await seed();
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function query<T extends mysql.RowDataPacket[]>(sql: string, params?: any[]): Promise<T> {
-  const db = getPool();
-  const [rows] = await db.execute<T>(sql, params);
-  return rows;
+export async function query<T = any>(sql: string, params: any[] = []): Promise<T[]> {
+  const stmt = getDb().prepare(sql);
+  return stmt.all(...params) as T[];
+}
+
+export interface ExecuteResult {
+  insertId: number;
+  affectedRows: number;
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
-export async function execute(sql: string, params?: any[]): Promise<mysql.ResultSetHeader> {
-  const db = getPool();
-  const [result] = await db.execute<mysql.ResultSetHeader>(sql, params);
-  return result;
+export async function execute(sql: string, params: any[] = []): Promise<ExecuteResult> {
+  const info = getDb().prepare(sql).run(...params);
+  return { insertId: Number(info.lastInsertRowid), affectedRows: info.changes };
 }
