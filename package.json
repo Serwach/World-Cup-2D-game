@@ -1,0 +1,24 @@
+{
+  "name": "world-cup-game",
+  "version": "1.0.0",
+  "private": true,
+  "scripts": {
+    "dev": "concurrently --kill-others \"npm run dev:server\" \"npm run dev:client\"",
+    "dev:server": "npm --prefix server run dev",
+    "dev:client": "npm --prefix client run dev",
+    "build": "npm --prefix client run build && npm --prefix server run build",
+    "test": "npm run test:unit && npm run test:integration",
+    "test:unit": "cd tests && ./node_modules/.bin/jest --config jest.config.ts --testPathPatterns=unit",
+    "test:integration": "cd tests && ./node_modules/.bin/jest --config jest.config.ts --testPathPatterns=integration",
+    "test:e2e": "cd tests && ./node_modules/.bin/playwright test --config playwright.config.ts",
+    "db:migrate": "ts-node db/migrate.ts",
+    "db:seed": "ts-node db/seed.ts",
+    "postinstall": "npm --prefix client install && npm --prefix server install && npm --prefix tests install"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "typescript": "^5.3.3",
+    "ts-node": "^10.9.2",
+    "@types/node": "^20.11.0"
+  }
+}
