@@ -1,69 +1,71 @@
-CREATE DATABASE IF NOT EXISTS worldcup2026 CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-USE worldcup2026;
+-- SQLite schema for the World Cup 2026 game.
+-- Run as a single script via better-sqlite3's Database.exec().
+
+PRAGMA foreign_keys = ON;
 
 CREATE TABLE IF NOT EXISTS groups_table (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(10) NOT NULL UNIQUE
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL UNIQUE
 );
 
 CREATE TABLE IF NOT EXISTS teams (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  group_name VARCHAR(10) NOT NULL,
-  primary_color VARCHAR(20) NOT NULL DEFAULT '#FFFFFF',
-  secondary_color VARCHAR(20) NOT NULL DEFAULT '#000000',
-  confederation VARCHAR(20) NOT NULL DEFAULT 'UEFA',
-  flag_emoji VARCHAR(10) NOT NULL DEFAULT '🏳️',
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  group_name TEXT NOT NULL,
+  primary_color TEXT NOT NULL DEFAULT '#FFFFFF',
+  secondary_color TEXT NOT NULL DEFAULT '#000000',
+  confederation TEXT NOT NULL DEFAULT 'UEFA',
+  flag_emoji TEXT NOT NULL DEFAULT '🏳️',
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE IF NOT EXISTS players (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  name VARCHAR(100) NOT NULL,
-  team_id INT NOT NULL,
-  position ENUM('GK','DEF','MID','FWD') NOT NULL,
-  shirt_number INT NOT NULL DEFAULT 0,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT NOT NULL,
+  team_id INTEGER NOT NULL,
+  position TEXT NOT NULL CHECK (position IN ('GK','DEF','MID','FWD')),
+  shirt_number INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE
 );
 
 CREATE TABLE IF NOT EXISTS matches (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  team_a INT NOT NULL,
-  team_b INT NOT NULL,
-  score_a INT NOT NULL DEFAULT 0,
-  score_b INT NOT NULL DEFAULT 0,
-  stage ENUM('group','knockout') NOT NULL DEFAULT 'group',
-  round_name VARCHAR(50) DEFAULT NULL,
-  played TINYINT(1) NOT NULL DEFAULT 0,
-  extra_time TINYINT(1) NOT NULL DEFAULT 0,
-  penalties TINYINT(1) NOT NULL DEFAULT 0,
-  penalty_score_a INT DEFAULT NULL,
-  penalty_score_b INT DEFAULT NULL,
-  match_order INT NOT NULL DEFAULT 0,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  team_a INTEGER NOT NULL,
+  team_b INTEGER NOT NULL,
+  score_a INTEGER NOT NULL DEFAULT 0,
+  score_b INTEGER NOT NULL DEFAULT 0,
+  stage TEXT NOT NULL DEFAULT 'group' CHECK (stage IN ('group','knockout')),
+  round_name TEXT DEFAULT NULL,
+  played INTEGER NOT NULL DEFAULT 0,
+  extra_time INTEGER NOT NULL DEFAULT 0,
+  penalties INTEGER NOT NULL DEFAULT 0,
+  penalty_score_a INTEGER DEFAULT NULL,
+  penalty_score_b INTEGER DEFAULT NULL,
+  match_order INTEGER NOT NULL DEFAULT 0,
   FOREIGN KEY (team_a) REFERENCES teams(id),
   FOREIGN KEY (team_b) REFERENCES teams(id)
 );
 
 CREATE TABLE IF NOT EXISTS standings (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  group_name VARCHAR(10) NOT NULL,
-  team_id INT NOT NULL,
-  points INT NOT NULL DEFAULT 0,
-  played INT NOT NULL DEFAULT 0,
-  won INT NOT NULL DEFAULT 0,
-  drawn INT NOT NULL DEFAULT 0,
-  lost INT NOT NULL DEFAULT 0,
-  goals_for INT NOT NULL DEFAULT 0,
-  goals_against INT NOT NULL DEFAULT 0,
-  goal_difference INT GENERATED ALWAYS AS (goals_for - goals_against) STORED,
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  group_name TEXT NOT NULL,
+  team_id INTEGER NOT NULL,
+  points INTEGER NOT NULL DEFAULT 0,
+  played INTEGER NOT NULL DEFAULT 0,
+  won INTEGER NOT NULL DEFAULT 0,
+  drawn INTEGER NOT NULL DEFAULT 0,
+  lost INTEGER NOT NULL DEFAULT 0,
+  goals_for INTEGER NOT NULL DEFAULT 0,
+  goals_against INTEGER NOT NULL DEFAULT 0,
+  goal_difference INTEGER GENERATED ALWAYS AS (goals_for - goals_against) STORED,
   FOREIGN KEY (team_id) REFERENCES teams(id) ON DELETE CASCADE,
-  UNIQUE KEY unique_standing (group_name, team_id)
+  UNIQUE (group_name, team_id)
 );
 
 CREATE TABLE IF NOT EXISTS tournament_config (
-  id INT AUTO_INCREMENT PRIMARY KEY,
-  current_stage VARCHAR(50) NOT NULL DEFAULT 'group',
-  group_stage_done TINYINT(1) NOT NULL DEFAULT 0,
-  created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-  updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  current_stage TEXT NOT NULL DEFAULT 'group',
+  group_stage_done INTEGER NOT NULL DEFAULT 0,
+  created_at TEXT DEFAULT CURRENT_TIMESTAMP,
+  updated_at TEXT DEFAULT CURRENT_TIMESTAMP
 );

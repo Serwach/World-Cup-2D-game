@@ -6,17 +6,16 @@ import {
   simulateRemainingGroupMatches,
   getQualifiedTeams,
 } from '../tournament/engine';
-import * as mysql from 'mysql2/promise';
 
 const router = Router();
 
 router.get('/state', async (_req: Request, res: Response) => {
   try {
-    const [config] = await query<mysql.RowDataPacket[]>(
+    const [config] = await query(
       'SELECT * FROM tournament_config ORDER BY id DESC LIMIT 1'
     );
     const standings = await getGroupStandings();
-    const matches = await query<mysql.RowDataPacket[]>(
+    const matches = await query(
       `SELECT m.*,
         ta.name as team_a_name, ta.flag_emoji as team_a_flag,
         tb.name as team_b_name, tb.flag_emoji as team_b_flag
@@ -48,19 +47,7 @@ router.post('/reset', async (_req: Request, res: Response) => {
 
     // Re-seed
     const { seed } = await import('../seeder');
-    const conn = await mysql.createConnection({
-      host: process.env.DB_HOST || 'localhost',
-      port: parseInt(process.env.DB_PORT || '3306'),
-      user: process.env.DB_USER || 'root',
-      password: process.env.DB_PASSWORD || 'password',
-      database: process.env.DB_NAME || 'worldcup2026',
-      multipleStatements: true,
-    });
-    try {
-      await seed(conn);
-    } finally {
-      await conn.end();
-    }
+    await seed();
 
     res.json({ success: true, message: 'Tournament reset and re-seeded.' });
   } catch (err) {
@@ -70,7 +57,7 @@ router.post('/reset', async (_req: Request, res: Response) => {
 
 router.post('/advance-to-knockout', async (_req: Request, res: Response) => {
   try {
-    const [config] = await query<mysql.RowDataPacket[]>(
+    const [config] = await query(
       'SELECT * FROM tournament_config ORDER BY id DESC LIMIT 1'
     );
     if (config?.group_stage_done) {
@@ -90,10 +77,10 @@ router.post('/advance-to-knockout', async (_req: Request, res: Response) => {
 router.get('/bracket', async (_req: Request, res: Response) => {
   try {
     const rounds = ['round_of_32', 'round_of_16', 'quarter_final', 'semi_final', 'third_place', 'final'];
-    const bracket: Record<string, mysql.RowDataPacket[]> = {};
+    const bracket: Record<string, unknown[]> = {};
 
     for (const round of rounds) {
-      bracket[round] = await query<mysql.RowDataPacket[]>(
+      bracket[round] = await query(
         `SELECT m.*,
           ta.name as team_a_name, ta.flag_emoji as team_a_flag, ta.primary_color as team_a_color,
           tb.name as team_b_name, tb.flag_emoji as team_b_flag, tb.primary_color as team_b_color

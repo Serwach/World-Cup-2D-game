@@ -1,4 +1,4 @@
-import * as mysql from 'mysql2/promise';
+import { query, execute } from './db';
 
 interface TeamSeed {
   name: string;
@@ -505,19 +505,19 @@ const TEAMS: TeamSeed[] = [
   },
 ];
 
-async function seed(connection: mysql.Connection) {
+async function seed() {
   console.log('Seeding groups...');
   const groups = ['A','B','C','D','E','F','G','H','I','J','K','L'];
   for (const g of groups) {
-    await connection.execute(
-      'INSERT IGNORE INTO groups_table (name) VALUES (?)',
+    await execute(
+      'INSERT OR IGNORE INTO groups_table (name) VALUES (?)',
       [g]
     );
   }
 
   console.log('Seeding teams and players...');
   for (const team of TEAMS) {
-    const [result] = await connection.execute<mysql.ResultSetHeader>(
+    const result = await execute(
       `INSERT INTO teams (name, group_name, primary_color, secondary_color, confederation, flag_emoji)
        VALUES (?, ?, ?, ?, ?, ?)`,
       [team.name, team.group_name, team.primary_color, team.secondary_color, team.confederation, team.flag_emoji]
@@ -525,7 +525,7 @@ async function seed(connection: mysql.Connection) {
     const teamId = result.insertId;
 
     for (const p of team.players) {
-      await connection.execute(
+      await execute(
         'INSERT INTO players (name, team_id, position, shirt_number) VALUES (?, ?, ?, ?)',
         [p.name, teamId, p.position, p.shirt_number]
       );
@@ -534,7 +534,7 @@ async function seed(connection: mysql.Connection) {
 
   console.log('Seeding group stage matches...');
   // Fetch teams from DB to get their IDs
-  const [rows] = await connection.execute<mysql.RowDataPacket[]>(
+  const rows = await query<{ id: number; name: string; group_name: string }>(
     'SELECT id, name, group_name FROM teams ORDER BY group_name, id'
   );
   const teamsByGroup: Record<string, { id: number; name: string }[]> = {};
@@ -549,7 +549,7 @@ async function seed(connection: mysql.Connection) {
     // Round-robin: each pair plays once
     for (let i = 0; i < gTeams.length; i++) {
       for (let j = i + 1; j < gTeams.length; j++) {
-        await connection.execute(
+        await execute(
           `INSERT INTO matches (team_a, team_b, stage, played, match_order)
            VALUES (?, ?, 'group', 0, ?)`,
           [gTeams[i].id, gTeams[j].id, matchOrder++]
@@ -561,17 +561,16 @@ async function seed(connection: mysql.Connection) {
   console.log('Seeding standings...');
   for (const groupName of Object.keys(teamsByGroup)) {
     for (const team of teamsByGroup[groupName]) {
-      await connection.execute(
-        `INSERT IGNORE INTO standings (group_name, team_id, points, played, won, drawn, lost, goals_for, goals_against)
+      await execute(
+        `INSERT OR IGNORE INTO standings (group_name, team_id, points, played, won, drawn, lost, goals_for, goals_against)
          VALUES (?, ?, 0, 0, 0, 0, 0, 0, 0)`,
         [groupName, team.id]
       );
     }
   }
 
-  await connection.execute(
-    `INSERT INTO tournament_config (current_stage) VALUES ('group')
-     ON DUPLICATE KEY UPDATE current_stage='group'`
+  await execute(
+    `INSERT INTO tournament_config (current_stage) VALUES ('group')`
   );
 
   console.log('Seed complete! 48 teams, 192 players, group stage matches ready.');
